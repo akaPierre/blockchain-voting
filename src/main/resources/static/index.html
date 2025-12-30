@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Blockchain Voting</title>
+    <style>
+        body { font-family: Arial; padding: 20px; max-width: 800px; margin: auto; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 5px; max-height: 300px; overflow: auto; }
+        input, select { padding: 10px; margin: 5px; border: 1px solid #ddd; border-radius: 5px; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+<h1>🚀 Blockchain Voting System</h1>
+
+<h2>📊 Live Results</h2>
+<pre id="results">{}</pre>
+
+<h2>🗳️ Cast Vote</h2>
+<input id="voterId" placeholder="Voter ID (e.g. alice)" value="alice">
+<select id="candidate">
+    <option value="CandidateA">Candidate A</option>
+    <option value="CandidateB">Candidate B</option>
+</select>
+<br>
+<button onclick="generateVote()">1. Generate Vote JSON</button>
+<button onclick="castVote()">2. Cast Vote</button>
+<pre id="voteJson" class="error">{ Click "Generate Vote JSON" first }</pre>
+
+<h2>⛓️ Blockchain</h2>
+<button onclick="loadChain()">Load Chain</button>
+<pre id="chain"></pre>
+
+<script>
+    let voteJson = null;
+
+    async function apiCall(url, options = {}) {
+        try {
+            const res = await fetch(url, options);
+            return await res.json();
+        } catch(e) {
+            console.error(e);
+            return { error: e.message };
+        }
+    }
+
+    async function loadResults() {
+        const data = await apiCall('/api/voting/results');
+        document.getElementById('results').textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function generateVote() {
+        const voterId = document.getElementById('voterId').value;
+        const candidate = document.getElementById('candidate').value;
+
+        document.getElementById('voteJson').className = '';
+        document.getElementById('voteJson').textContent = 'Generating...';
+
+        const data = await apiCall(`/api/voting/generate-vote/${voterId}/${candidate}`);
+        if (data.success) {
+            voteJson = data.useThisJson;
+            document.getElementById('voteJson').textContent = voteJson;
+            document.getElementById('voteJson').className = 'success';
+        } else {
+            document.getElementById('voteJson').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('voteJson').className = 'error';
+        }
+    }
+
+    async function castVote() {
+        if (!voteJson) {
+            alert('Generate vote JSON first!');
+            return;
+        }
+
+        const data = await apiCall('/api/voting/vote', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: voteJson
+        });
+
+        alert('Vote result: ' + JSON.stringify(data, null, 2));
+        loadResults();
+        loadChain();
+    }
+
+    async function loadChain() {
+        const data = await apiCall('/api/voting/chain');
+        document.getElementById('chain').textContent = JSON.stringify(data, null, 2);
+    }
+
+    // Auto-refresh results
+    setInterval(loadResults, 2000);
+    loadResults();
+</script>
+</body>
+</html>
